@@ -34,7 +34,7 @@
 
 @interface NSString (GrowlTunesMultiplicationAdditions)
 
-- (NSString *)stringByMultiplyingBy:(unsigned)multi;
+- (NSString *)stringByMultiplyingBy:(NSUInteger)multi;
 
 @end
 
@@ -107,6 +107,7 @@ enum {
 	plugins = [[self loadPlugins] retain];
 	trackID = 0;
 	trackURL = @"";
+	lastPostedDescription = @""
 	trackRating = -1;
 
 	return self;
@@ -504,7 +505,10 @@ enum {
 			nil];
 		[displayString release];
 
-		if (![newTrackURL isEqualToString:trackURL] || [newTrackURL hasPrefix:@"http://"]) { // this is different from previous notification, or it's a stream
+		BOOL URLChanged = ![trackURL isEqualToString:newTrackURL];
+		BOOL isStream = [newTrackURL hasPrefix:@"http://"];
+		BOOL descriptionChanged = ![lastPostedDescription isEqualToString:displayString]);
+		if (URLChanged || (isStream && descriptionChanged)) {
 			// Tell Growl
 			[GrowlApplicationBridge notifyWithDictionary:noteDict];
 
@@ -521,6 +525,8 @@ enum {
 		state = newState;
 		[trackURL release];
 		trackURL = [newTrackURL retain];
+		[lastPostedDescription release];
+		lastPostedDescription = [displayString retain];
 	}
 }
 
@@ -1147,15 +1153,15 @@ static int comparePlugins(id <GrowlTunesPlugin> plugin1, id <GrowlTunesPlugin> p
 
 @implementation NSString (GrowlTunesMultiplicationAdditions)
 
-- (NSString *)stringByMultiplyingBy:(unsigned)multi {
-	unsigned length = [self length];
-	unsigned length_multi = length * multi;
+- (NSString *)stringByMultiplyingBy:(NSUInteger)multi {
+	NSUInteger length = [self length];
+	NSUInteger length_multi = length * multi;
 
 	unichar *buf = malloc(sizeof(unichar) * length_multi);
 	if (!buf)
 		return nil;
 
-	for (unsigned i = 0U; i < multi; ++i)
+	for (NSUInteger i = 0UL; i < multi; ++i)
 		[self getCharacters:&buf[length * i]];
 
 	NSString *result = [NSString stringWithCharacters:buf length:length_multi];

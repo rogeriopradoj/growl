@@ -5,8 +5,8 @@
 ###       (needed for proper version checking)
 ###   * Update the version string in Extras/growlnotify/main.m
 #
-VERSION=1.1.6
-BETA=FALSE
+VERSION=1.2b1
+BETA=TRUE
 
 #
 #########################
@@ -22,7 +22,9 @@ SRC_DIR=$(PWD)/..
 BUILD_DIR=build
 GROWL_DIR=$(BUILD_DIR)/Growl
 SDK_DIR=$(BUILD_DIR)/SDK
-BUILDSTYLE=Deployment
+FMWK_DIR=$(BUILD_DIR)/Growl-$(VERSION)-Framework
+FMWK_TBZ_NAME=Growl-$(VERSION)-Framework.tbz
+BUILDSTYLE=Release
 BUILDFLAGS="BUILDCONFIGURATION=$(BUILDSTYLE)"
 PRODUCT_DIR=$(shell defaults read com.apple.Xcode PBXApplicationwideBuildSettings 2> /dev/null | cat > XcodeBuildSettings.plist && defaults read $PWD/XcodeBuildSettings SYMROOT 2> /dev/null; rm XcodeBuildSettings.plist)
 ifeq ($(strip $(PRODUCT_DIR)),)
@@ -164,10 +166,9 @@ release:
 	cp -R $(HARDWAREGROWLER_BUILD_DIR)/HardwareGrowler.app $(GROWL_DIR)/Extras/HardwareGrowler
 	cp $(SRC_DIR)/Extras/HardwareGrowler/*.txt $(GROWL_DIR)/Extras/HardwareGrowler
 	
-	@# build GrowlMail packages
+	@# build GrowlMail package
 	mkdir $(GROWL_DIR)/Extras/GrowlMail
-	$(PACKAGE_MAKER) --doc GrowlMail/GrowlMail\ Installer.pmdoc --out $(GROWL_DIR)/Extras/GrowlMail/GrowlMail-Leopard.mpkg --version $(VERSION) --id com.growl.growlmail.mpkg -v	
-	$(PACKAGE_MAKER) --doc GrowlMail/GrowlMail\ Installer-Tiger.pmdoc --out $(GROWL_DIR)/Extras/GrowlMail/GrowlMail-Tiger.mpkg --version $(VERSION) --id com.growl.growlmail.tiger.mpkg -v	
+	$(PACKAGE_MAKER) --doc GrowlMail/GrowlMail\ Installer.pmdoc --out $(GROWL_DIR)/Extras/GrowlMail/GrowlMail.mpkg --version $(VERSION) --id com.growl.growlmail.mpkg -v	
 	cp $(SRC_DIR)/Extras/GrowlMail/*.rtf $(GROWL_DIR)/Extras/GrowlMail
 	
 	@# build GrowlSafari package
@@ -188,7 +189,7 @@ release:
 	
 	@# copy over beep hammer
 	mkdir $(SDK_DIR)/BeepHammer
-	cp -R $(SRC_DIR)/Developer\ Tools/BeepHammer/build/Deployment/BeepHammer.app $(SDK_DIR)/BeepHammer
+	cp -R $(SRC_DIR)/Developer\ Tools/BeepHammer/build/$(BUILDSTYLE)/BeepHammer.app $(SDK_DIR)/BeepHammer
 	
 	@# copy over relevant files to compile directly into app
 	mkdir $(SDK_DIR)/Built-In
@@ -240,3 +241,15 @@ release:
 	
 	@echo Build finished
 	-growlnotify -n 'Growl Release Makefile' 'Growl disk image built successfully' -m $(RELEASE_FILENAME).dmg --iconpath $(BUILD_DIR)/$(RELEASE_FILENAME).dmg
+
+framework-archive: assertnochanges
+	-mkdir "$(BUILD_DIR)"
+	-rm -R "$(FMWK_DIR)"
+	mkdir "$(FMWK_DIR)"
+	-rm "$(BUILD_DIR)/$(FMWK_TBZ_NAME)"
+	
+	$(MAKE) $(BUILDFLAGS) -C "$(SRC_DIR)" growlapplicationbridge
+	
+	cp -R "$(GROWL_BUILD_DIR)/Growl.framework" "$(GROWL_BUILD_DIR)/Growl.framework.dSYM" "$(SRC_DIR)/License.txt" "$(FMWK_DIR)"
+	
+	tar cjf "$(BUILD_DIR)/$(FMWK_TBZ_NAME)" -C "$(dir $(FMWK_DIR))" "$(notdir $(FMWK_DIR))"

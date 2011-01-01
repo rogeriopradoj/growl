@@ -39,14 +39,14 @@
 
 @interface NSString (GrowlMail_KeywordReplacing)
 
-- (NSString *) stringByReplacingKeywords:(NSArray *)keywords
-                              withValues:(NSArray *)values;
+- (NSString *) GMStringByReplacingKeywords:(NSArray *)keywords
+                                withValues:(NSArray *)values;
 
 @end
 
 @interface NSMutableString (GrowlMail_LineOrientedTruncation)
 
-- (void) trimStringToFirstNLines:(NSUInteger)n;
+- (void) GMTrimStringToFirstNLines:(NSUInteger)n;
 
 @end
 
@@ -90,6 +90,9 @@
 	NSString *account = (NSString *)[[[self mailbox] account] displayName];
 	NSString *sender = [self sender];
 	NSString *senderAddress = [sender uncommentedAddress];
+	BOOL senderAddressIsValid = [senderAddress respondsToSelector:@selector(isLegalEmailAddress)]
+		? [senderAddress isLegalEmailAddress]
+		: ([senderAddress rangeOfString:@"@"].location != NSNotFound);
 	NSString *subject = (NSString *)[self subject];
 	NSString *body;
 	GrowlMailNotifier *notifier = [GrowlMailNotifier sharedNotifier];
@@ -114,7 +117,7 @@
 		if (originalBody) {
 			NSMutableString *transformedBody = [[[originalBody stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] mutableCopy] autorelease];
 			NSUInteger lengthWithoutWhitespace = [transformedBody length];
-			[transformedBody trimStringToFirstNLines:4U];
+			[transformedBody GMTrimStringToFirstNLines:4U];
 			NSUInteger length = [transformedBody length];
 			if (length > 200U) {
 				[transformedBody deleteCharactersInRange:NSMakeRange(200U, length - 200U)];
@@ -142,8 +145,8 @@
 		(body ? body : @""),
 		(account ? account : @""),
 		 nil];
-	NSString *title = [titleFormat stringByReplacingKeywords:keywords withValues:values];
-	NSString *description = [descriptionFormat stringByReplacingKeywords:keywords withValues:values];
+	NSString *title = [titleFormat GMStringByReplacingKeywords:keywords withValues:values];
+	NSString *description = [descriptionFormat GMStringByReplacingKeywords:keywords withValues:values];
 
 	/*
 	NSLog(@"Subject: '%@'", subject);
@@ -152,30 +155,19 @@
 	NSLog(@"Body: '%@'", body);
 	*/
 
-	/*
-	 * MailAddressManager fetches images asynchronously so they might arrive
-	 * after we have sent our notification.
-	 */
-	/*
-	MailAddressManager *addressManager = [MailAddressManager addressManager];
-	[addressManager fetchImageForAddress:senderAddress];
-	NSImage *image = [addressManager imageForMailAddress:senderAddress];
-	*/
-	ABSearchElement *personSearch = [ABPerson searchElementForProperty:kABEmailProperty
-																 label:nil
-																   key:nil
-																 value:senderAddress
-															comparison:kABEqualCaseInsensitive];
-
 	NSData *image = nil;
-	NSEnumerator *matchesEnum = [[[ABAddressBook sharedAddressBook] recordsMatchingSearchElement:personSearch] objectEnumerator];
-	ABPerson *person;
-	while ((!image) && (person = [matchesEnum nextObject]))
-		image = [person imageData];
+	if (senderAddressIsValid) {
+		ABSearchElement *personSearch = [ABPerson searchElementForProperty:kABEmailProperty
+																	 label:nil
+																	   key:nil
+																	 value:senderAddress
+																comparison:kABEqualCaseInsensitive];
 
-	//no matches in the Address Book with an icon, so use Mail's icon instead.
-	if (!image)
-		image = [[NSImage imageNamed:@"NSApplicationIcon"] TIFFRepresentation];
+		NSEnumerator *matchesEnum = [[[ABAddressBook sharedAddressBook] recordsMatchingSearchElement:personSearch] objectEnumerator];
+		ABPerson *person;
+		while ((!image) && (person = [matchesEnum nextObject]))
+			image = [person imageData];
+	}
 
 	NSString *notificationName;
 	if ([self isJunk] || ([[MailAccount junkMailboxUids] containsObject:[self mailbox]])) {
@@ -205,8 +197,8 @@
 
 @implementation NSString (GrowlMail_KeywordReplacing)
 
-- (NSString *) stringByReplacingKeywords:(NSArray *)keywords
-                              withValues:(NSArray *)values
+- (NSString *) GMStringByReplacingKeywords:(NSArray *)keywords
+                                withValues:(NSArray *)values
 {
 	NSParameterAssert([keywords count] == [values count]);
 	NSMutableString *str = [[self mutableCopy] autorelease];
@@ -226,7 +218,7 @@
 
 @implementation NSMutableString (GrowlMail_LineOrientedTruncation)
 
-- (void) trimStringToFirstNLines:(NSUInteger)n {
+- (void) GMTrimStringToFirstNLines:(NSUInteger)n {
 	NSRange range;
 	NSUInteger end = 0U;
 	NSUInteger length;

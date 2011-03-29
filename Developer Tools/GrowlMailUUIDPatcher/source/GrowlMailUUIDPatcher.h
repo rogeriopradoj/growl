@@ -2,7 +2,7 @@
 //  GrowlMailUUIDPatcher.h
 //  GrowlMailUUIDPatcher
 //
-//  Copyright 2010 The Growl Project. All rights reserved.
+//  Copyright 2010–2011 The Growl Project. All rights reserved.
 //
 
 @class GrowlMailFoundBundle;
@@ -12,6 +12,8 @@
 	NSWindow *window;
 	NSTableView *warningNotesTable;
 	NSPanel *confirmationSheet;
+	NSButton *okButton; //Deliberately not an outlet to resist attempts by users to defeat delayed enabling
+	NSTimer *delayedEnableTimer;
 	NSIndexSet *selectedBundleIndexes;
 
 	NSMutableArray /*of NSStrings*/ *warningNotes;

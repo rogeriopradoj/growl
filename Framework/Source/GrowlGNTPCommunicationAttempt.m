@@ -39,6 +39,10 @@ enum {
 
 - (void) dealloc {
 	[callbackHeaderItems release];
+   
+   [socket synchronouslySetDelegate:nil];
+   [socket release];
+   socket = nil;
 
 	[super dealloc];
 }
@@ -256,13 +260,15 @@ enum {
       resultValue = 2;
    
    id clickContext = nil;
-   if([[contextType headerValue] caseInsensitiveCompare:@"String"] == NSOrderedSame)
-      clickContext = [context headerValue];
-
-   //In the future, we need to implement dictionary support
-   if(!clickContext)
-      return;
    
+   if([[contextType headerValue] caseInsensitiveCompare:@"PList"] == NSOrderedSame)
+      clickContext = [NSPropertyListSerialization propertyListWithData:[[context headerValue] dataUsingEncoding:NSUTF8StringEncoding] 
+                                                               options:0
+                                                                format:NULL
+                                                                 error:NULL];
+   else
+      clickContext = [context headerValue];
+      
    NSObject<GrowlApplicationBridgeDelegate> *growlDelegate = [GrowlApplicationBridge growlDelegate];
    
    switch (resultValue) {
